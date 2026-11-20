@@ -144,9 +144,13 @@ let search = document.querySelector(".searchicon");
 function setrep(value) {
   // Reputation is a plain score, not a percentage: show the number itself
   // and fill the ring proportionally (capped so big scores stay readable).
+  // The ring's number shrinks as the score grows so it never overflows.
   let num = Number(value) || 0;
-  document.querySelector(".repupi").children[0].innerText =
-    num.toLocaleString("en-US");
+  let el = document.querySelector(".repupi").children[0];
+  el.innerText = num.toLocaleString("en-US");
+  let digits = String(num).length;
+  el.style.fontSize =
+    digits <= 3 ? "50px" : digits === 4 ? "36px" : digits <= 6 ? "26px" : "20px";
   let deg = num >= 100 ? 99 : Math.floor(num);
   setpi(".repupi", "var(--pr1)", deg);
 }
