@@ -1,231 +1,148 @@
-// LeetCode User Finder — profile stats for any LeetCode username.
-// Data API: see API_BASE in the search section below (the original
-// Heroku-hosted API shut down; a drop-in replacement is used instead).
-let modeicon = document.querySelector(".darkmood .bx");
-let errormsg = document.querySelector(".errormsg");
-const root = document.documentElement;
-
-function setnight() {
-  modeicon.classList.remove("bxs-moon");
-  modeicon.classList.add("bx-moon");
-}
-
-function setday() {
-  modeicon.classList.remove("bx-moon");
-  modeicon.classList.add("bxs-moon");
-}
-
-function seterror(massage) {
-  errormsg.innerText = massage;
-  errormsg.style.display = "flex";
-  setTimeout(() => {
-    errormsg.style.display = "none";
-  }, 4000);
-}
-function resetuser() {
-  document.querySelector(".username").innerText = `Find A User Details Now👋`;
-}
-function setdark() {
-  root.style.setProperty("--sc1", "#211e1e");
-  root.style.setProperty("--sc2", "#363333");
-  root.style.setProperty("--sc3", "#4c4949");
-  root.style.setProperty("--sc4", "#636060");
-  root.style.setProperty("--sc5", "#7b7979");
-  root.style.setProperty("--sc6", "#949292");
-
-  root.style.setProperty("--pr1", "#ffa200");
-  root.style.setProperty("--pr2", "#ffac34");
-  root.style.setProperty("--pr3", "#ffb652");
-  root.style.setProperty("--pr4", "#ffc16b");
-  root.style.setProperty("--pr5", "#ffcb84");
-  root.style.setProperty("--pr6", "#ffd59d");
-}
-function setlight() {
-  root.style.setProperty("--pr1", "#282A35");
-  root.style.setProperty("--pr2", "#282A35");
-  root.style.setProperty("--pr3", "#282A35");
-  root.style.setProperty("--pr4", "#000");
-  root.style.setProperty("--pr5", "#282A35");
-  root.style.setProperty("--pr6", "#000000");
-
-  root.style.setProperty("--sc1", "#fff");
-  root.style.setProperty("--sc2", "#E7E9EB");
-  root.style.setProperty("--sc3", "#E7E9EB");
-  root.style.setProperty("--sc4", "#E7E9EB");
-  root.style.setProperty("--sc5", "#282A35");
-  root.style.setProperty("--sc6", "#282A35");
-}
-
-function setpi(selector, setcolor, deg) {
-  document.querySelector(selector).style = `
-  background: radial-gradient(
-    circle at 50% 50%,
-      var(--sc1) 64%,
-      transparent 65%,
-      transparent 70%,
-      var(--sc3) 71%,
-      var(--sc3) 100%
-   ),
-   conic-gradient(
-     from 210deg at 50% 50%,
-     ${setcolor} ${deg * 3}deg /* mutilpe of 3deg to 1% ....*/,
-     white 0deg,
-     white 300deg,
-     gray 10deg
-   );
- `;
-}
-
-function setvalue(obt, total, selector) {
-  let setcolor = "";
-  if (selector == ".easypi") {
-    setcolor = "green";
-  } else if (selector == ".mediumpi") {
-    setcolor = "blue";
-  } else if (selector == ".hardpi") {
-    setcolor = "red";
-  } else {
-    setcolor = "var(--pr1)";
-  }
-
-  let deg = 0;
-  if (obt != 0 && total != 0) {
-    deg = Math.floor((obt / total) * 100);
-    if (deg == 100) {
-      deg = 99;
-    }
-    if (deg < 10) {
-      deg = "0" + deg;
-      document.querySelector(selector).children[0].innerText = deg;
-    } else {
-      document.querySelector(selector).children[0].innerText = deg;
-    }
-  } else {
-    document.querySelector(selector).children[0].innerText = "00";
-  }
-
-  let cal = obt + " / " + total;
-  document.querySelector(selector).nextElementSibling.innerText = cal;
-
-  setpi(selector, setcolor, deg);
-}
-
-function setper(value, selector) {
-  let deg = Math.floor(value);
-  let setcolor = "var(--pr1)";
-
-  setpi(selector, setcolor, deg);
-
-  if (deg == 100) {
-    deg = 99;
-  }
-  if (deg < 10) {
-    deg = "0" + deg;
-    document.querySelector(selector).children[0].innerText = deg;
-  } else {
-    document.querySelector(selector).children[0].innerText = deg;
-  }
-}
-
-function reset() {
-  setvalue(0, 0, ".easypi");
-  setvalue(0, 0, ".mediumpi");
-  setvalue(0, 0, ".hardpi");
-  setvalue(0, 0, ".solvepi");
-  setper(0, ".accratepi");
-  setper(0, ".repupi");
-}
-
+// LeetCode User Finder — modern design
+// Live profile stats via a public LeetCode API (the original Heroku-hosted
+// API shut down; this is a drop-in replacement with the same data).
+// The acceptance rate is computed from the submission breakdown because
+// the API has no ready-made field for it.
 const API_BASE = "https://leetcode-api-faisalshohag.vercel.app";
+const RING_CIRCUMFERENCE = 427.3; // 2 * PI * 68 (the SVG ring's radius)
 
-let user = document.querySelector(".search");
-let search = document.querySelector(".searchicon");
+const $ = (id) => document.getElementById(id);
+const els = {
+  form: $("searchForm"),
+  input: $("usernameInput"),
+  btn: $("searchBtn"),
+  error: $("errorBanner"),
+  status: $("statusLine"),
+  card: $("resultCard"),
+  ring: $("totalRing"),
+  totalPercent: $("totalPercent"),
+  profileName: $("profileName"),
+  totalSolved: $("totalSolved"),
+  totalQuestionsText: $("totalQuestionsText"),
+  ranking: $("ranking"),
+  contribution: $("contribution"),
+  reputation: $("reputation"),
+  acceptance: $("acceptance"),
+  acceptanceBar: $("acceptanceBar"),
+  submissions: $("submissions"),
+  acceptedCount: $("acceptedCount"),
+};
 
-function setrep(value) {
-  // Reputation is a plain score, not a percentage: show the number itself
-  // and fill the ring proportionally (capped so big scores stay readable).
-  // The ring's number shrinks as the score grows so it never overflows.
-  let num = Number(value) || 0;
-  let el = document.querySelector(".repupi").children[0];
-  el.innerText = num.toLocaleString("en-US");
-  let digits = String(num).length;
-  el.style.fontSize =
-    digits <= 3 ? "50px" : digits === 4 ? "36px" : digits <= 6 ? "26px" : "20px";
-  let deg = num >= 100 ? 99 : Math.floor(num);
-  setpi(".repupi", "var(--pr1)", deg);
+const fmt = (n) => (Number(n) || 0).toLocaleString("en-US");
+const pct = (part, total) => (total > 0 ? (part / total) * 100 : 0);
+
+function setDiff(prefix, solved, total) {
+  $(prefix + "Solved").textContent = fmt(solved);
+  $(prefix + "Total").textContent = fmt(total);
+  const p = pct(solved, total);
+  $(prefix + "Pct").textContent = p.toFixed(1).replace(/\.0$/, "") + "%";
+  $(prefix + "Bar").style.width = p + "%";
 }
 
-async function findUser() {
-  let finduser = user.value.trim();
+function render(username, data) {
+  const totalPct = pct(data.totalSolved, data.totalQuestions);
 
-  if (!finduser) {
-    seterror("Error ⚠️ : Please Enter Username 😡");
-    reset();
-    resetuser();
+  els.profileName.textContent = username;
+  els.totalSolved.textContent = fmt(data.totalSolved);
+  els.totalQuestionsText.textContent = fmt(data.totalQuestions);
+  els.totalPercent.textContent = totalPct.toFixed(1).replace(/\.0$/, "") + "%";
+  els.ring.style.strokeDashoffset =
+    RING_CIRCUMFERENCE * (1 - Math.min(totalPct, 100) / 100);
+
+  els.ranking.textContent = data.ranking ? "#" + fmt(data.ranking) : "—";
+  els.contribution.textContent = fmt(data.contributionPoint);
+  els.reputation.textContent = fmt(data.reputation);
+
+  setDiff("easy", data.easySolved, data.totalEasy);
+  setDiff("medium", data.mediumSolved, data.totalMedium);
+  setDiff("hard", data.hardSolved, data.totalHard);
+
+  // Acceptance rate from the "All" row of totalSubmissions.
+  const all = (data.totalSubmissions || []).find(
+    (row) => row.difficulty === "All"
+  );
+  const acceptance = all ? pct(all.count, all.submissions) : 0;
+  els.acceptance.textContent = acceptance.toFixed(1) + "%";
+  els.acceptanceBar.style.width = acceptance + "%";
+  els.submissions.textContent = all ? fmt(all.submissions) : "—";
+  els.acceptedCount.textContent = all ? fmt(all.count) : "—";
+
+  els.card.hidden = false;
+  els.status.hidden = true;
+}
+
+function showError(message) {
+  els.error.textContent = message;
+  els.error.hidden = false;
+}
+
+function setLoading(loading) {
+  els.card.classList.toggle("is-loading", loading);
+  els.btn.disabled = loading;
+  els.btn.textContent = loading ? "Searching…" : "Search";
+}
+
+async function search(rawUsername) {
+  const username = (rawUsername ?? els.input.value).trim();
+  if (!username) {
+    showError("Please enter a LeetCode username first.");
     return;
   }
-
+  els.error.hidden = true;
+  setLoading(true);
   try {
     const response = await fetch(
-      `${API_BASE}/${encodeURIComponent(finduser)}`
+      `${API_BASE}/${encodeURIComponent(username)}`
     );
     const data = await response.json();
-
     if (data.errors || typeof data.totalSolved !== "number") {
-      seterror("Error ⚠️ : User Not Found 😌");
-      reset();
-      resetuser();
+      showError(`No LeetCode user found for “${username}”. Check the spelling and try again.`);
       return;
     }
-
-    document.querySelector(".username").innerText = `Welcome ${finduser} 👋`;
-    setvalue(data.easySolved, data.totalEasy, ".easypi");
-    setvalue(data.mediumSolved, data.totalMedium, ".mediumpi");
-    setvalue(data.hardSolved, data.totalHard, ".hardpi");
-    setvalue(data.totalSolved, data.totalQuestions, ".solvepi");
-
-    // This API has no ready-made acceptance rate, so compute it from the
-    // "All" row of totalSubmissions (accepted / total submissions).
-    let all = (data.totalSubmissions || []).find(
-      (row) => row.difficulty === "All"
-    );
-    let acceptance =
-      all && all.submissions > 0 ? (all.count / all.submissions) * 100 : 0;
-    setper(acceptance, ".accratepi");
-
-    setrep(data.reputation);
-  } catch (error) {
-    console.error(error);
-    seterror("Error ⚠️ : Could not load data — please try again.");
-    reset();
-    resetuser();
+    els.input.value = "";
+    render(username, data);
+  } catch (err) {
+    console.error(err);
+    showError("Network error — please check your connection and try again.");
+  } finally {
+    setLoading(false);
   }
 }
 
-search.addEventListener("click", findUser);
-user.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    findUser();
-  }
+/* ---------------- events ---------------- */
+els.form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  search();
 });
 
-if (window.matchMedia("(prefers-color-scheme: light)").matches) {
-  setlight();
-  setday();
-} else {
-  setdark();
-  setnight();
+document.querySelectorAll(".chip").forEach((chip) => {
+  chip.addEventListener("click", () => search(chip.dataset.user));
+});
+
+/* ---------------- theme ---------------- */
+const rootEl = document.documentElement;
+function applyTheme(theme) {
+  rootEl.setAttribute("data-theme", theme);
+  try {
+    localStorage.setItem("luf-theme", theme);
+  } catch (e) {
+    /* storage unavailable (e.g. file://) — theme just won't persist */
+  }
 }
 
-let theme = window.matchMedia("(prefers-color-scheme: light)").matches;
-document.querySelector(".darkmood").addEventListener("click", () => {
-  if (theme) {
-    setdark();
-    setnight();
-    theme = false;
-  } else {
-    setlight();
-    setday();
-    theme = true;
-  }
+let savedTheme = null;
+try {
+  savedTheme = localStorage.getItem("luf-theme");
+} catch (e) {
+  savedTheme = null;
+}
+applyTheme(
+  savedTheme ||
+    (window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark")
+);
+
+$("themeToggle").addEventListener("click", () => {
+  applyTheme(rootEl.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });

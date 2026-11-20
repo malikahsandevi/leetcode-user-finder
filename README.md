@@ -1,16 +1,22 @@
 # LeetCode User Finder
 
-Look up any LeetCode profile in one clean view — enter a username and see
-their solved problems, acceptance rate and reputation as animated rings.
+Look up any LeetCode profile in one clean, modern view — enter a username
+and see their solved problems, acceptance rate, ranking and reputation.
 
 ## Features
 
-- Search any LeetCode username (click the search icon or press Enter)
-- Rings for Total Solved, Easy, Medium and Hard — with solved / total counts
-- Acceptance rate computed from the user's submission stats
-- Reputation score display
-- Dark / light theme toggle (follows your system preference by default)
-- Friendly error messages for empty input or unknown users
+- Search any LeetCode username and see their stats in one glass dashboard
+- Animated SVG progress ring for total solved, plus Easy / Medium / Hard
+  bars in LeetCode's own difficulty colours
+- Global ranking, contribution points and reputation
+- Acceptance rate and total submissions, computed from the submission stats
+- Quick-try chips for well-known profiles
+- Dark / light themes (follows your system preference; the toggle remembers
+  your choice)
+- Friendly error messages for empty input, unknown users and network errors
+
+Design: glassmorphism dashboard, Space Grotesk + Inter, animated ambient
+background, fully responsive.
 
 ## Tech Stack
 
